@@ -27,6 +27,14 @@ public class ControlManager : MonoBehaviour {
     }
 
     /// <summary>
+    /// 输入集合
+    /// </summary>
+    public static Dictionary<string, InputField> _inputmap;
+    public static Dictionary<string, InputField> Inputs {
+        get { return _inputmap; }
+    }
+
+    /// <summary>
     /// 按钮贴图列表
     /// </summary>
     private static Dictionary<Button, List<Sprite>> _buttonTextures;
@@ -41,14 +49,15 @@ public class ControlManager : MonoBehaviour {
 
     void Start() {
         _pagemap = new Dictionary<string, Canvas>();
+        _inputmap = new Dictionary<string, InputField>();
         _buttonmap = new Dictionary<string, List<Button>>();
         _buttonTextures = new Dictionary<Button, List<Sprite>>();
 
         foreach (var page in FindObjectsOfType<Canvas>()) {
             _pagemap.Add(page.name, page);
-            var _buttons = page.GetComponentsInChildren<Button>().ToList();
-            _buttonmap.Add(page.name, _buttons);
-            foreach (Button b in _buttons) {
+            var buttons = page.GetComponentsInChildren<Button>().ToList();
+            _buttonmap.Add(page.name, buttons);
+            foreach (Button b in buttons) {
                 b.onClick.AddListener(() => {
                     ButtonEvent?.Invoke(b, page);
                 });
@@ -57,6 +66,10 @@ public class ControlManager : MonoBehaviour {
                         ButtonTextures.Add(b, ResourceManager.GetResourceList<Sprite>("/texture", new string[] { "ViewMode_F", "ViewMode_T" }));
                         break;
                 }
+            }
+            var inputs = page.GetComponentsInChildren<InputField>().ToList();
+            foreach (InputField ipt in inputs) {
+                _inputmap.Add(ipt.name, ipt);
             }
         }
     }

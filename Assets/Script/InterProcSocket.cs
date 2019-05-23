@@ -76,6 +76,8 @@ public class InterProcSocket {
     /// 初始化
     /// </summary>
     private void Init() {
+        _client = null;
+        _buffer = null;
         _buffer = new byte[4096];
         _client = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         _client.ReceiveTimeout = _timeout;
@@ -86,15 +88,13 @@ public class InterProcSocket {
     /// 连接服务器
     /// </summary>
     public bool Connect() {
-        if (_client == null)
+        lock (_client) {
             Init();
 
-        _client.Connect(new IPAddress(new byte[] { 219, 216, 64, 135 }), _port);
-        _client.BeginReceive(_buffer, 0, _buffer.Length, 0, new AsyncCallback(OnMessageReceived), null);
-        if (_client.Connected)
-            return true;
-        else
-            return false;
+            _client.Connect(new IPAddress(new byte[] { 219, 216, 64, 135 }), _port);
+            _client.BeginReceive(_buffer, 0, _buffer.Length, 0, new AsyncCallback(OnMessageReceived), null);
+            return _client.Connected;
+        }
     }
 
 
@@ -104,15 +104,13 @@ public class InterProcSocket {
     /// <param name="addr"></param>
     /// <returns></returns>
     public bool Connect(string addr) {
-        if (_client == null)
+        lock (_client) {
             Init();
 
-        _client.Connect(IPAddress.Parse(addr), _port);
-        _client.BeginReceive(_buffer, 0, _buffer.Length, 0, new AsyncCallback(OnMessageReceived), null);
-        if (_client.Connected)
-            return true;
-        else
-            return false;
+            _client.Connect(IPAddress.Parse(addr), _port);
+            _client.BeginReceive(_buffer, 0, _buffer.Length, 0, new AsyncCallback(OnMessageReceived), null);
+            return _client.Connected;
+        }
     }
 
     /// <summary>
@@ -134,7 +132,6 @@ public class InterProcSocket {
             _client.Close();
             _client = null;
         }
-
     }
 
     /// <summary>

@@ -25,6 +25,7 @@ public class MainControl : MonoBehaviour {
     /// 客户端控制台
     /// </summary>
     public Text Log;
+    public GameObject SettingPanel;
 
     /// <summary>
     /// 用于线程间通信的委托
@@ -63,6 +64,7 @@ public class MainControl : MonoBehaviour {
     /// 当前加载的楼层模型
     /// </summary>
     private GameObject _tempmodel = null;
+    private string _tempmodelname = "L1";
     private int _templayer = 0;
 
     /// <summary>
@@ -83,6 +85,7 @@ public class MainControl : MonoBehaviour {
     private Timer _buffertimer;
     private string _buffertitle;
     private int _calcu;
+
     #endregion 
 
     void Start() {
@@ -93,6 +96,7 @@ public class MainControl : MonoBehaviour {
         ControlManager.ButtonEvent += ControlManager_ButtonEvent;
         _viewbtn = ControlManager.Buttons["ModelPage"].Find((btnn) => { return btnn.name.Equals("ChangeView"); });
         SwitchCamera(0);
+        SettingPanel.SetActive(false);
         _buffertitle = "连接服务器";
         //异步连接服务器
         Task.Run(() => {
@@ -150,6 +154,24 @@ public class MainControl : MonoBehaviour {
                 _viewbtnvis = !_viewbtnvis;
                 _viewbtn.gameObject.SetActive(_viewbtnvis);
                 break;
+            case "Setting":
+                SettingPanel.SetActive(!SettingPanel.activeSelf);
+                break;
+            case "Submit":
+                _buffertitle = "重新连接服务器";
+                Task.Run(() => {
+                    try {
+                        InterProcSocket.Singleton.Value.Connect(ControlManager.Inputs["Input_IP_Test"].text);
+                        InterProcSocket.Singleton.Value.MessageReceived -= Value_MessageReceived;
+                        InterProcSocket.Singleton.Value.MessageReceived += Value_MessageReceived;
+                    }
+                    catch {
+                        _uiActions += new Action(() => {
+                            Log.text = "连接失败，请检查网络连接";
+                        });
+                    }
+                });
+                break;
             default: break;
         }
     }
@@ -163,11 +185,15 @@ public class MainControl : MonoBehaviour {
                 MainCamera.enabled = true;
                 TopCamera.enabled = false;
                 LOC_ID.SetActive(false);
+                UnloadModel();
+                LoadModel(_tempmodelname);
                 break;
             case 1://Top
                 TopCamera.enabled = true;
                 MainCamera.enabled = false;
                 LOC_ID.SetActive(true);
+                UnloadModel();
+                LoadModel("Xinxi", 56);
                 break;
             case 2://Pers
 
@@ -180,7 +206,7 @@ public class MainControl : MonoBehaviour {
     /// 加载StreamingAssets中的模型
     /// </summary>
     /// <param name="name">模型名称</param>
-    private void LoadModel(string name) {
+    private void LoadModel(string name, int transparent = 100) {
         //资源加载 加载的是打包到资源包里面，每个资源的名字
         _tempmodel = Instantiate(ResourceManager.GetResource<GameObject>("/model", name)) as GameObject;
         _tempmodel.transform.position = Vector3.zero;
@@ -189,6 +215,11 @@ public class MainControl : MonoBehaviour {
         foreach (MeshRenderer render in _tempmodel.GetComponentsInChildren<MeshRenderer>()) {
             render.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
+        //if(transparent != 100) {
+        //    foreach (MeshRenderer render in _tempmodel.GetComponentsInChildren<MeshRenderer>()) {
+        //        SetMaterialsColor(render, transparent / 100);
+        //    }
+        //}
     }
 
     /// <summary>
@@ -211,13 +242,17 @@ public class MainControl : MonoBehaviour {
                 _spoint = Input.touches[0].position;
             }
             else if (Input.touches[0].phase == TouchPhase.Moved) {
-                if (_tempviewmode  == 0) {
+                if (_tempviewmode == 0) {
                     //第一人称时触屏滑动操作
                     MainCamera.transform.Rotate(new Vector3(0, Input.touches[0].deltaPosition.x * _movefactor, 0));
+                    _targetangle = MainCamera.transform.rotation;
                 }
-                else {
+                else if (_tempviewmode == 1) {
                     //第三人称时触屏滑动操作
                     TopCamera.transform.Translate(new Vector3(-Input.touches[0].deltaPosition.x * _movefactor_1, -Input.touches[0].deltaPosition.y * _movefactor_1, 0));
+                }
+                else {
+
                 }
                 _scalestart = true;
             }
@@ -234,10 +269,13 @@ public class MainControl : MonoBehaviour {
                     _scale = _lastdis - newdis > 0 ? 1 + _scalefactor : 1 - _scalefactor;
                     MainCamera.fieldOfView = MainCamera.fieldOfView * _scale < 24 ? 24 : MainCamera.fieldOfView * _scale > 72 ? 72 : MainCamera.fieldOfView * _scale;
                 }
-                else {
+                else if (_tempviewmode == 1) {
                     //第三人称时触屏放缩操作
                     _scale = _lastdis - newdis > 0 ? 1 + _scalefactor_1 : 1 - _scalefactor_1;
                     TopCamera.orthographicSize = TopCamera.orthographicSize * _scale > 160 ? 160 : TopCamera.orthographicSize * _scale < 20 ? 20 : TopCamera.orthographicSize * _scale;
+                }
+                else {
+
                 }
                 _lastdis = newdis;
             }
@@ -249,19 +287,21 @@ public class MainControl : MonoBehaviour {
     /// 反馈窗口反馈缓冲情况
     /// </summary>
     private void LogBuffer(bool on) {
-        if (on) {
-            if (_buffertimer == null)
-                _buffertimer = new Timer(400);
-            if (_buffertimer.Enabled)
-                return;
-            _buffertimer.Elapsed -= DrawBuffer;
-            _buffertimer.Elapsed += DrawBuffer;
-            _buffertimer.Enabled = true;
-        }
-        else {
-            if (_buffertimer == null)
-                return;
-            _buffertimer.Enabled = false;
+        if (_buffertimer == null)
+            _buffertimer = new Timer(400);
+        lock (_buffertimer) {
+            if (on) {
+                if (_buffertimer.Enabled)
+                    return;
+                _buffertimer.Elapsed -= DrawBuffer;
+                _buffertimer.Elapsed += DrawBuffer;
+                _buffertimer.Enabled = true;
+            }
+            else {
+                if (_buffertimer == null)
+                    return;
+                _buffertimer.Enabled = false;
+            }
         }
     }
 
@@ -295,6 +335,7 @@ public class MainControl : MonoBehaviour {
                 _templayer = int.Parse(vector[2]);
                 UnloadModel();
                 LoadModel("L" + (_templayer + 1).ToString());
+                _tempmodelname = "L" + (_templayer + 1).ToString();
             }
             int x, y, z;
             x = int.Parse(vector[0]);
@@ -345,30 +386,6 @@ public class MainControl : MonoBehaviour {
         TouchMove();
     }
 
-    //// Update is called once per frame
-    //void Update () {
-
-    //    Debug.DrawLine(Target.transform.position, transform.position, Color.red);
-    //    RaycastHit[] hit;
-
-    //    hit = Physics.RaycastAll(Target.transform.position, transform.position);
-    //    if (hit.Length > 0) {
-    //        for (int i = 0; i < hit.Length; i++) {
-    //            //Debug.LogWarning("有碰撞" + hit[i].collider.gameObject.name);
-    //            Renderer obj = hit[i].collider.gameObject.GetComponent<Renderer>();
-    //            colliderObject.Add(obj);
-    //            SetMaterialsColor(obj, 0.5f);
-    //        }
-    //    }//还原
-    //    else {
-    //        for (int i = 0; i < colliderObject.Count; i++) {
-    //            Renderer obj = colliderObject[i];
-    //            SetMaterialsColor(obj, 1f);
-    //        }
-    //    }
-
-    //}
-
     /// <summary>
     /// 修改遮挡物体所有材质
     /// </summary>
@@ -381,13 +398,10 @@ public class MainControl : MonoBehaviour {
         int materialsNumber = _renderer.sharedMaterials.Length;
         for (int i = 0; i < materialsNumber; i++) {
             SetMaterialRenderingMode(_renderer.materials[i], RenderingMode.Transparent);
-
             //获取当前材质球颜色
             Color color = _renderer.materials[i].color;
-
             //设置透明度  0-1;  0 = 完全透明
             color.a = Transpa;
-
             //置当前材质球颜色
             _renderer.materials[i].SetColor("_Color", color);
         }
