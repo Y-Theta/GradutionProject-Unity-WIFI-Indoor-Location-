@@ -1,0 +1,31 @@
+ManifestFileVersion: 0
+CRC: 434317988
+Hashes:
+  AssetFileHash:
+    serializedVersion: 2
+    Hash: cfd30e6887eb4bf8a27515b4ce4140d7
+  TypeTreeHash:
+    serializedVersion: 2
+    Hash: 813466e6bd79712f10f61108eadcec0d
+HashAppended: 0
+ClassTypes:
+- Class: 1
+  Script: {instanceID: 0}
+- Class: 4
+  Script: {instanceID: 0}
+- Class: 21
+  Script: {instanceID: 0}
+- Class: 23
+  Script: {instanceID: 0}
+- Class: 33
+  Script: {instanceID: 0}
+- Class: 43
+  Script: {instanceID: 0}
+- Class: 48
+  Script: {instanceID: 0}
+Assets:
+- Assets/Scenes/Xinxi.fbx
+- Assets/Scenes/L1.fbx
+- Assets/Scenes/L2.fbx
+- Assets/Scenes/L3.fbx
+Dependencies: []

@@ -6,9 +6,15 @@
 *.user
 *.userosscache
 *.sln.docstates
+*.info
 
 # User-specific files (MonoDevelop/Xamarin Studio)
+# Unity
 *.userprefs
+Library/metadata/
+Temp/
+Library/PlayerDataCache/
+Library/ShaderCache/
 
 # Build results
 [Dd]ebug/

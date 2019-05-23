@@ -1,0 +1,16 @@
+ManifestFileVersion: 0
+CRC: 910969136
+AssetBundleManifest:
+  AssetBundleInfos:
+    Info_0:
+      Name: model
+      Dependencies: {}
+    Info_1:
+      Name: xml
+      Dependencies: {}
+    Info_2:
+      Name: texture
+      Dependencies: {}
+    Info_3:
+      Name: text
+      Dependencies: {}
